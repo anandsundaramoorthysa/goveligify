@@ -63,7 +63,7 @@ export function SchemeResultCard({ scheme }: { scheme: Scheme }) {
         <a
           href={scheme.officialPortalUrl}
           target="_blank"
-          rel="nofollow noopener"
+          rel="nofollow noopener noreferrer"
           className={buttonClasses({ variant: "saffron", size: "sm", className: "w-full" })}
         >
           Apply on official portal

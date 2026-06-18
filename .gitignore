@@ -30,8 +30,15 @@
 # ─────────────────────────────────────────────────────────────
 # Environment variables (never commit secrets)
 # ─────────────────────────────────────────────────────────────
-.env
-.env*.local
+.env*
+!.env.example
+
+# Service-account / credential files (never commit)
+serviceAccount.json
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+*-credentials.json
+*.key
 
 # ─────────────────────────────────────────────────────────────
 # Deployment

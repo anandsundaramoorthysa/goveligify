@@ -45,7 +45,7 @@ export function ScreenBubble({ message }: { message: Message }) {
                     href={href}
                     {...props}
                     {...(external
-                      ? { target: "_blank", rel: "nofollow noopener" }
+                      ? { target: "_blank", rel: "nofollow noopener noreferrer" }
                       : {})}
                   />
                 );

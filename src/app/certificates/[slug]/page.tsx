@@ -123,7 +123,7 @@ export default async function CertificateDetailPage({
                   <a
                     href={certificate.officialPortalUrl}
                     target="_blank"
-                    rel="nofollow noopener"
+                    rel="nofollow noopener noreferrer"
                     className={buttonClasses({ variant: "saffron", size: "lg" })}
                   >
                     Apply on official portal
@@ -272,7 +272,7 @@ export default async function CertificateDetailPage({
                 <a
                   href={certificate.officialPortalUrl}
                   target="_blank"
-                  rel="nofollow noopener"
+                  rel="nofollow noopener noreferrer"
                   className={buttonClasses({
                     variant: "saffron",
                     size: "md",

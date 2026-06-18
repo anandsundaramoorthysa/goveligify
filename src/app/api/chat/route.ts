@@ -14,7 +14,17 @@ interface ChatRequestBody {
   history?: Message[];
 }
 
+const MAX_BODY_BYTES = 64 * 1024; // 64 KB
+const MAX_MESSAGE_CHARS = 2000;
+const MAX_HISTORY_ITEMS = 30;
+
 export async function POST(req: Request): Promise<NextResponse> {
+  // Cheap first guard against oversized payloads.
+  const declaredLen = Number(req.headers.get("content-length") ?? 0);
+  if (declaredLen > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+
   let body: ChatRequestBody;
   try {
     body = (await req.json()) as ChatRequestBody;
@@ -22,12 +32,18 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const message = (body.message ?? "").trim();
+  const message = (typeof body.message === "string" ? body.message : "").trim();
   if (!message) {
     return NextResponse.json({ error: "Missing 'message'" }, { status: 400 });
   }
+  if (message.length > MAX_MESSAGE_CHARS) {
+    return NextResponse.json({ error: "Message too long" }, { status: 413 });
+  }
 
-  const history = Array.isArray(body.history) ? body.history : [];
+  // Bound the history: only keep the most recent items, each a well-formed message.
+  const history = (Array.isArray(body.history) ? body.history : [])
+    .filter((m): m is Message => !!m && typeof (m as Message).content === "string")
+    .slice(-MAX_HISTORY_ITEMS);
 
   try {
     const turn: BotTurn = await mockEngine.send(message, history);

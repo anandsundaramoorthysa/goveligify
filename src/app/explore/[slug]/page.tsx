@@ -114,7 +114,7 @@ export default async function SchemeDetailPage({
                   <a
                     href={scheme.officialPortalUrl}
                     target="_blank"
-                    rel="nofollow noopener"
+                    rel="nofollow noopener noreferrer"
                     className={buttonClasses({ variant: "saffron", size: "lg" })}
                   >
                     Apply on official portal
@@ -245,7 +245,7 @@ export default async function SchemeDetailPage({
                 <a
                   href={scheme.officialPortalUrl}
                   target="_blank"
-                  rel="nofollow noopener"
+                  rel="nofollow noopener noreferrer"
                   className={buttonClasses({
                     variant: "saffron",
                     size: "md",
