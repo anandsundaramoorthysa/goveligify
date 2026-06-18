@@ -4,7 +4,7 @@ import { Container } from "@/components/layout/Container";
 import { SITE, FOOTER_NAV } from "@/lib/site";
 
 export function Footer() {
-  const year = 2026; // build-time constant; avoids hydration mismatch
+  const year = new Date().getFullYear(); // server component — resolved at build/render
   return (
     <footer className="mt-24 border-t border-surface-muted bg-surface-card">
       <div className="tricolor-rule" aria-hidden />

@@ -105,6 +105,9 @@ export function WelcomeState({ onPick }: Props) {
       <p className="mt-8 text-xs font-medium text-ink-faint">
         Free · No login · Never submits applications for you.
       </p>
+      <p className="mt-2 max-w-md text-xs text-ink-faint/80">
+        Preview — answers use a small sample of schemes; full, verified coverage is coming soon.
+      </p>
     </div>
   );
 }

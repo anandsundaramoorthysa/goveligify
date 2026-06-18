@@ -17,8 +17,13 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   if (fullScreen) {
     return (
       <div className="flex h-[100dvh] flex-col">
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <Header />
-        <div className="min-h-0 flex-1">{children}</div>
+        <main id="main" className="min-h-0 flex-1">
+          {children}
+        </main>
       </div>
     );
   }

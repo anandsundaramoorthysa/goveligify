@@ -43,7 +43,6 @@ export const FOOTER_NAV: { title: string; items: NavItem[] }[] = [
     title: "Company",
     items: [
       { label: "About", href: "/about" },
-      { label: "How it works", href: "/how-it-works" },
       { label: "FAQ", href: "/faq" },
     ],
   },

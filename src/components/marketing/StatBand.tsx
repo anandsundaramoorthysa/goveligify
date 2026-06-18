@@ -6,7 +6,7 @@ import { CERTIFICATES } from "@/data/certificates";
 const STATS = [
   { value: `${SCHEMES.length}+`, label: "Government schemes explained" },
   { value: `${CERTIFICATES.length}`, label: "Essential certificates covered" },
-  { value: "28 states", label: "Plus all-India central schemes" },
+  { value: "100%", label: "Linked to official government portals" },
 ];
 
 /** Bold navy-gradient impact band with white text + community motif. */
