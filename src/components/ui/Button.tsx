@@ -9,8 +9,8 @@ const base =
 const variants: Record<Variant, string> = {
   // navy = primary action (AA-safe on white)
   primary: "bg-navy text-white hover:bg-navy-light",
-  // saffron accent CTA — pairs with navy text for contrast
-  saffron: "bg-saffron text-navy-deep hover:bg-saffron-deep hover:text-white",
+  // saffron accent CTA — white text, darker bg on hover/active
+  saffron: "bg-saffron text-white hover:bg-saffron-deep hover:shadow-sm active:scale-[0.97] active:bg-saffron-deep",
   outline: "border border-navy/25 text-navy hover:bg-surface-subtle",
   ghost: "text-navy hover:bg-surface-subtle",
   white: "bg-white text-navy-deep hover:bg-gray-50 hover:shadow-md active:bg-gray-100",
