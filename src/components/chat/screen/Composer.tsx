@@ -83,6 +83,10 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
   const [listening, setListening] = useState(false);
   const [micSupported, setMicSupported] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [micPermission, setMicPermission] = useState<
+    "unknown" | "granted" | "denied" | "prompt"
+  >("unknown");
+  const [showBlockedHelp, setShowBlockedHelp] = useState(false);
   const innerRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const micTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,6 +94,37 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
 
   useEffect(() => {
     setMicSupported(getSpeechRecognition() !== null);
+  }, []);
+
+  // Watch the browser's stored mic permission so that once the user fixes a
+  // block from outside the page (browser site settings), our "blocked" UI
+  // clears itself without needing a reload. This is observational only — it
+  // never gates the mic button, since some browsers (notably Edge) can
+  // report "denied" here even when the real, user-gesture-triggered request
+  // would succeed or correctly show the native permission prompt.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.permissions?.query) return;
+    let result: PermissionStatus | null = null;
+    let cancelled = false;
+    navigator.permissions
+      .query({ name: "microphone" as PermissionName })
+      .then((status) => {
+        if (cancelled) return;
+        result = status;
+        status.onchange = () => {
+          if (status.state !== "denied") {
+            setMicPermission("granted");
+            setShowBlockedHelp(false);
+          }
+        };
+      })
+      .catch(() => {
+        /* "microphone" isn't a queryable permission in this browser */
+      });
+    return () => {
+      cancelled = true;
+      if (result) result.onchange = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -132,6 +167,7 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
     }
 
     setMicError(null);
+    setShowBlockedHelp(false);
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = SPEECH_LOCALE[lang];
     recognition.interimResults = false;
@@ -145,11 +181,13 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
     recognition.onend = () => stopListening();
     recognition.onerror = (e) => {
       const blocked = e?.error === "not-allowed" || e?.error === "service-not-allowed";
-      stopListening(
-        blocked
-          ? "Microphone access is blocked — allow it in your browser settings."
-          : "Didn't catch that — please try again.",
-      );
+      if (blocked) {
+        setMicPermission("denied");
+        setShowBlockedHelp(true);
+        stopListening();
+      } else {
+        stopListening("Didn't catch that — please try again.");
+      }
     };
 
     recognitionRef.current = recognition;
@@ -249,7 +287,7 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
                   onClick={() => setLangOpen(false)}
                   aria-hidden="true"
                 />
-                <div className="absolute bottom-11 left-0 z-40 w-36 animate-fade-in rounded-2xl border border-navy/10 bg-surface-card p-1.5 shadow-card-lg">
+                <div className="absolute bottom-11 left-0 z-40 max-h-64 w-36 animate-fade-in overflow-y-auto rounded-2xl border border-navy/10 bg-surface-card p-1.5 shadow-card-lg scrollbar-thin">
                   {LANGUAGES.map((l) => (
                     <button
                       key={l.code}
@@ -278,16 +316,32 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
               <button
                 type="button"
                 onClick={toggleMic}
-                aria-label={listening ? t.micStop : t.micStart}
-                title={listening ? t.micStop : t.micStart}
+                aria-label={
+                  micPermission === "denied"
+                    ? "Microphone blocked — tap for help"
+                    : listening
+                      ? t.micStop
+                      : t.micStart
+                }
+                title={
+                  micPermission === "denied"
+                    ? "Microphone blocked — tap for help"
+                    : listening
+                      ? t.micStop
+                      : t.micStart
+                }
+                aria-haspopup={micPermission === "denied" ? "menu" : undefined}
+                aria-expanded={micPermission === "denied" ? showBlockedHelp : undefined}
                 className={cn(
                   "grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors",
-                  listening
-                    ? "animate-pulse bg-saffron/20 text-saffron-deep"
-                    : "text-ink-muted hover:bg-surface-subtle hover:text-navy",
+                  micPermission === "denied"
+                    ? "text-red-500 hover:bg-red-50"
+                    : listening
+                      ? "animate-pulse bg-saffron/20 text-saffron-deep"
+                      : "text-ink-muted hover:bg-surface-subtle hover:text-navy",
                 )}
               >
-                {listening ? (
+                {micPermission === "denied" || listening ? (
                   <MicOff size={17} aria-hidden="true" />
                 ) : (
                   <Mic size={17} aria-hidden="true" />
@@ -302,7 +356,59 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
                   {micError}
                 </div>
               )}
+
+              {showBlockedHelp && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setShowBlockedHelp(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute bottom-11 left-0 z-40 w-64 animate-fade-in rounded-2xl border border-navy/10 bg-surface-card p-3 text-left shadow-card-lg">
+                    <p className="text-xs font-semibold text-navy-deep">
+                      Microphone is blocked for this site
+                    </p>
+                    <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[11px] leading-snug text-ink-muted">
+                      <li>
+                        Click the mic icon to the left of the address bar
+                        (next to the page-info icon).
+                      </li>
+                      <li>Set &ldquo;Microphone&rdquo; to Allow.</li>
+                      <li>Then tap &ldquo;Try again&rdquo; below.</li>
+                    </ol>
+                    <div className="mt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBlockedHelp(false);
+                          toggleMic();
+                        }}
+                        className="text-[11px] font-semibold text-navy underline-offset-2 hover:underline"
+                      >
+                        Try again
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowBlockedHelp(false)}
+                        className="text-[11px] font-semibold text-ink-muted underline-offset-2 hover:underline"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+          )}
+
+          {listening && (
+            <span
+              role="status"
+              className="flex items-center gap-1.5 rounded-full bg-saffron/15 px-2.5 py-1 text-[11px] font-semibold text-saffron-deep"
+            >
+              <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-saffron-deep" />
+              {t.micListening}
+            </span>
           )}
 
           <div className="flex-1" />

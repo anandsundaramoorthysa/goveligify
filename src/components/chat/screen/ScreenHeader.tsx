@@ -1,10 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import {
   Download,
-  HelpCircle,
   Keyboard,
   Plus,
   Search,
@@ -290,15 +288,6 @@ export function ScreenHeader({
             </>
           )}
         </div>
-
-        <Link
-          href="/how-it-works"
-          aria-label="How it works"
-          title="How it works"
-          className={iconButton}
-        >
-          <HelpCircle size={18} aria-hidden="true" />
-        </Link>
       </div>
     </header>
   );

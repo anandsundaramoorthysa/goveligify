@@ -114,7 +114,17 @@ export interface Certificate {
 
 /* ------------------------------- chat ------------------------------------- */
 
-export type LangCode = "en" | "ta" | "hi";
+export type LangCode =
+  | "en"
+  | "ta"
+  | "hi"
+  | "ml"
+  | "kn"
+  | "te"
+  | "mr"
+  | "ur"
+  | "sa"
+  | "bn";
 
 export interface Message {
   id: string;

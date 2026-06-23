@@ -52,10 +52,12 @@ export function storeSoundOn(on: boolean): void {
   }
 }
 
+const VALID_LANGS: LangCode[] = ["en", "ta", "hi", "ml", "kn", "te", "mr", "ur", "sa", "bn"];
+
 export function getStoredLang(): LangCode {
   try {
-    const v = localStorage.getItem(LANG_KEY);
-    return v === "hi" || v === "ta" ? v : "en";
+    const v = localStorage.getItem(LANG_KEY) as LangCode | null;
+    return v && VALID_LANGS.includes(v) ? v : "en";
   } catch {
     return "en";
   }
