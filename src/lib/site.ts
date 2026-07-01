@@ -6,7 +6,7 @@ export const SITE = {
   url: "https://checkmyeligibility.in",
   tagline: "Find what you're entitled to.",
   description:
-    "CheckMyEligibility is a free AI guide to Indian government schemes, subsidies, and certificates. Describe your situation in plain language and discover what you qualify for, the documents you need, and exactly where to apply — on official portals.",
+    "CheckMyEligibility is a free AI assistant that helps Indian students discover scholarships, fellowships, education loans, and grants they are eligible for. Describe your situation in plain language and find out what you qualify for, the documents you need, and exactly where to apply — on official portals.",
   locale: "en-IN",
   email: "hello@checkmyeligibility.in",
   github: "https://github.com/anandsundaramoorthysa/checkmyeligibility",

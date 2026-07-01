@@ -1,6 +1,6 @@
-﻿# CheckMyEligibility — Development Roadmap
+# CheckMyEligibility — Development Roadmap
 
-Open-source project funded by the Dept. of Data Science, Loyola College, Chennai.
+Student-focused AI assistant for Indian government education schemes.
 MIT License · [github.com/anandsundaramoorthysa/checkmyeligibility](https://github.com/anandsundaramoorthysa/checkmyeligibility)
 
 ---
@@ -12,101 +12,103 @@ MIT License · [github.com/anandsundaramoorthysa/checkmyeligibility](https://git
 
 ---
 
-## Phase 1 — Foundation (Complete)
+## Foundation (Complete)
 
 - [x] Brand identity — logo, palette (saffron / green / navy), typography (Sora + Inter)
 - [x] Marketing site — Home, About, Explore, Certificates, How it works, FAQ, Privacy, Terms, 404
-- [x] Scheme detail pages — `/explore/[slug]` (18 sample schemes, SSG)
-- [x] Certificate detail pages — `/certificates/[slug]` (8 sample certificates, SSG)
-- [x] Chat UI — `/chat` full-screen assistant with bubbles, chips, composer, transcript persistence
+- [x] Chat UI shell — `/chat` full-screen assistant (bubbles, chips, composer, transcript persistence)
 - [x] Mock chat engine — keyword intent matching over sample data (`src/lib/chat/mockEngine.ts`)
-- [x] `/api/chat` route with payload guards
+- [x] `/api/chat` route with payload guards (64 KB cap, 2000-char message, 30-item history)
 - [x] SEO — JSON-LD, sitemap, robots.txt, OG images, canonical URLs
 - [x] Security hardening — CSP, X-Frame-Options, HSTS, noreferrer on external links
-- [x] `site.ts` — added `github`, `institution`, `license` fields
-- [x] `jsonld.ts` — added `sameAs`, `license`, `funder` to `organizationLd()`
+- [x] Institutional attribution — Dept. of Data Science, Loyola College, Chennai
+- [x] Domain `checkmyeligibility.in` purchased (26-Jun-2026)
 
 ---
 
-## Phase 2 — Real Data + AI Chat (Next)
+## Phase 1 — Student Scholarship MVP
 
-### Step 0 — Wire validated scheme data (prerequisite for everything below)
-- [ ] Export validated schemes from Console → `validated-schemes.v1.json`
-- [ ] Replace `src/data/schemes.ts` (18 samples) with Console export via `SchemeProvider` (`src/lib/data.ts`)
-- [ ] All existing pages (`/explore`, `/explore/[slug]`, sitemap) auto-populate with real 3,237 schemes
+**Target audience:** Indian students (UG, PG, PhD, Diploma, Professional courses).
+**Dataset:** 100–300 manually validated education schemes from official government portals.
 
-### Step 1 — Real LLM chat engine
-- [ ] Install Vercel AI SDK (`ai`) + free provider packages (Groq, Cerebras, Gemini free, OpenRouter `:free`)
-- [ ] Build provider-fallback `ChatEngine` replacing `mockEngine`
-- [ ] Answer caching (same question → 1 model call for thousands of users)
+### Data collection
+- [ ] Collect 100–300 student scholarship schemes from:
+  - National Scholarship Portal — [scholarships.gov.in](https://scholarships.gov.in/)
+  - University Grants Commission — [ugc.gov.in](https://www.ugc.gov.in/)
+  - AICTE — [aicte-india.org](https://www.aicte-india.org/)
+  - Ministry of Education — [education.gov.in](https://www.education.gov.in/)
+  - State government scholarship portals
+- [ ] Use MyScheme for scheme discovery only — always verify on the official source portal
+- [ ] Each scheme must include: name, ministry/department, category, eligibility, benefits, required documents, application dates, official URL, last verified date
+
+### Backend — FastAPI on Railway
+- [ ] Set up FastAPI (Python) project, deployed on Railway
+- [ ] PostgreSQL + pgvector database
+- [ ] Structured eligibility tables (filterable by course level, income, category, gender, state)
+- [ ] `POST /api/chat` endpoint callable from the Next.js frontend
+- [ ] Eligibility checking via structured DB queries (not RAG for basic eligibility)
+- [ ] Scheme search and recommendation endpoint
+- [ ] LiteLLM + OpenRouter integration for conversational explanations
+- [ ] RAG pipeline for follow-up questions and nuanced scheme explanations (only where queries exceed structured logic)
+- [ ] Answer caching (same question = 1 model call for many users)
 - [ ] Per-IP rate limiting
-- [ ] Farmer-friendly "system busy, try again" message (no emoji, Lucide clock icon)
-- [ ] Optional BYOK ("Advanced: connect your own key") — key stored in browser localStorage only, never sent to server
-- [ ] System prompt + guardrails
+- [ ] "Busy" fallback message when all providers are rate-limited
 
-### Step 2 — RAG store
-- [ ] Embed validated scheme data into a vector store
-- [ ] Wire retrieval into the chat engine for grounded answers
+### Frontend — Next.js on Vercel
+- [ ] Update chat quick-reply starters to student scenarios
+- [ ] Integrate shadcn/ui component library
+- [ ] Wire `/chat` → Next.js `/api/chat` proxy → FastAPI backend
+- [ ] Update sample data to education/scholarship schemes
+- [ ] Update marketing pages for student-focused audience
 
-### Step 3 — Special chat features
-- [ ] Scheme comparison — detect "compare X and Y" → 3 follow-up chips → definitive verdict + application pivot
-- [ ] Rejection/grievance guidance — detect rejection → ask state + reason → state-specific portal links + timelines
-
----
-
-## Phase 3 — Balance Pages
-
-> Requires Step 0 (real data) to be complete first.
-
-- [ ] **#11 — `/explore` refactor** — replace full scheme dump with category overview grid (8 cards with counts + "View all →" links)
-- [ ] **#9 — `/explore/[category]`** — category landing pages with paginated scheme grid
-- [ ] **#10 — `/explore/state/[state]`** — state landing pages with paginated scheme grid
-- [ ] Update `sitemap.ts` — add category + state URLs
-- [ ] Optional: `/search?q=` — keyword search results page (low priority; chatbot may cover this)
+### Chat features
+- [ ] Student eligibility chatbot (scholarship type, income bracket, course level, state, social category)
+- [ ] Simplified scheme explanations in plain English
+- [ ] Official source citations in every response
+- [ ] Scheme comparison for student schemes (interactive chips → eligibility-aware verdict)
+- [ ] Multilingual support (English + Tamil + Hindi)
 
 ---
 
-## Phase 4 — Site Content Updates
+## Phase 2 — Fellowships, Loans & Grants
 
-> Can be done any time, independent of data/AI.
-
-- [ ] **Footer** — add MIT License badge + GitHub link; add "Supported by Dept. of Data Science, Loyola College, Chennai"; rename "Company" → "Project"; add GitHub + Team links
-- [ ] **About page** — add "The project" section (open source, MIT, GitHub); add "Behind the data" section (human validation team); add institutional acknowledgement; add 5th value card "Human-verified"
-- [ ] **How It Works** — add 4th step "Verified by humans"; update WE_DO list
-- [ ] **FAQ** — add "About the project" group (who built this, open source, how data is validated); update existing accuracy + language FAQs
-- [ ] **Home — StatBand** — update scheme count to 3,200+ once real data wired; remove "Figures illustrative" disclaimer
-- [ ] **Home — Backed-by strip** — new component between CitizensBand and footer CTA: Loyola College + MIT License + GitHub
+- [ ] Student fellowships (UGC fellowships, DST, CSIR, ICMR JRF/SRF)
+- [ ] Education loans (Pradhan Mantri Vidya Lakshmi, state bank education schemes)
+- [ ] Research grants (project funding, conference travel grants for PhD students)
+- [ ] Expand dataset to post-graduation funding schemes
 
 ---
 
-## Phase 5 — Team Showcase
+## Phase 3 — Broader Education Schemes
 
-> After validation sprint is complete.
-
-- [ ] `/team` page — member cards by role (Project Leads / Platform Devs / Data Validators); contribution counts from Console feed; per-member AI summary
-- [ ] Enrich `/about` with team section + link to `/team`
-- [ ] Add "Team" to nav (`PRIMARY_NAV` + `FOOTER_NAV`)
-
----
-
-## Phase 6 — Multilingual
-
-- [ ] Hindi + Tamil chatbot responses
-- [ ] Farmer "busy" message in Hindi + regional languages
-- [ ] UI language switcher (types already carry `LangCode`)
+- [ ] All education-related central and state government schemes
+- [ ] Vocational training and skilling programmes linked to students
+- [ ] Study-abroad and international exchange schemes
+- [ ] State-specific hostel, transport subsidy, and stipend schemes
 
 ---
 
-## Phase 7 — Infra & Legal
+## Phase 4 — College Pilot & Expansion
 
-- [x] Domain `checkmyeligibility.in` purchased via Spaceship (26-Jun-2026)
-- [x] Attach domain to Vercel
-- [ ] Real rate limiting (Upstash/Vercel WAF) once LLM is live
-- [ ] Legal/compliance review before monetising (GODL/MyScheme terms, DPDP, GST)
-- [ ] Data-refresh pipeline (re-validate changed schemes periodically)
+- [ ] Pilot deployment with Loyola College and partner institutions
+- [ ] Collect user feedback from students
+- [ ] Refine eligibility logic and chatbot quality based on pilot results
+- [ ] Expand to other beneficiary groups (farmers, senior citizens, etc.) after validating the student-MVP approach
 
 ---
 
-## Data Source
+## Infrastructure & Legal
 
-Scheme data comes from the [CheckMyEligibility Console](https://github.com/anandsundaramoorthysa/goveligify-console) — an internal validation tool where a trained team of 18 manually reviews each of the 3,237 schemes against official government portals before it appears on this site.
+- [x] Domain `checkmyeligibility.in` — Vercel
+- [ ] FastAPI backend on Railway
+- [ ] PostgreSQL + pgvector on Railway (managed)
+- [ ] Hybrid data update pipeline — automated change detection on official pages → manual review → database update
+- [ ] Legal/compliance review before monetising (DPDP, GODL/MyScheme terms)
+
+---
+
+## Data Source Policy
+
+All scheme data comes only from official government websites. MyScheme is used for scheme discovery only — every scheme is always verified on the originating ministry or department portal. Every record stores the `lastVerifiedDate` and the `officialPortalUrl`.
+
+Future updates use a hybrid approach: an automated job detects changes on official pages, flags modified schemes, and queues them for manual review before the database is updated.

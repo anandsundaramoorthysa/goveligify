@@ -6,7 +6,9 @@
 
 ## Overview
 
-The CheckMyEligibility chatbot helps Indian citizens discover government schemes they're eligible for. The user describes their situation in plain language and the bot replies with matching schemes, eligibility details, required documents, and a direct link to apply on the official portal.
+The CheckMyEligibility chatbot helps **Indian students** (UG, PG, PhD, Diploma, Professional courses) discover government schemes — scholarships, fellowships, education loans, and grants — they are eligible for.
+
+The user describes their situation in plain language and the bot replies with matching schemes, eligibility details, required documents, and a direct link to apply on the official government portal.
 
 The bot **never submits applications** — it only points users to the official government portal. This is intentional for trust, consent, and legal safety.
 
@@ -16,14 +18,16 @@ The bot **never submits applications** — it only points users to the official 
 
 | Layer | Status |
 |-------|--------|
-| Chat UI (`/chat`) | Done — Phase 1 |
-| API route (`POST /api/chat`) | Done — Phase 1 |
-| Mock engine (keyword matching) | Done — Phase 1 |
-| Real LLM engine (RAG + free providers) | Not started — Phase 2 |
-| Scheme data (3,237 validated schemes) | Pending Console export |
-| Vector store (RAG) | Pending Phase 2 |
-| Scheme comparison feature | Planned — Phase 2 |
-| Rejection/grievance guidance | Planned — Phase 2 |
+| Chat UI (`/chat`) | Done |
+| API route (`POST /api/chat`) | Done — mock only |
+| Mock engine (keyword matching, student intents) | Done |
+| FastAPI backend (Python, Railway) | Not started — Phase 1 |
+| PostgreSQL + pgvector | Not started — Phase 1 |
+| LiteLLM + OpenRouter integration | Not started — Phase 1 |
+| Student eligibility structured queries | Not started — Phase 1 |
+| RAG pipeline | Not started — Phase 1 |
+| Scheme comparison feature | Planned — Phase 1 |
+| Multilingual (Tamil, Hindi) | Planned — Phase 1 |
 
 ---
 
@@ -34,15 +38,30 @@ Browser (/chat page)
   │
   └─ ChatScreen (React client component)
        │
-       └─ fetch  POST /api/chat
+       └─ fetch  POST /api/chat  (Next.js proxy on Vercel)
                     │
-                    └─ ChatEngine interface (src/lib/chat/engine.ts)
-                           │
-                           ├─ Phase 1: mockEngine (keyword matching, no LLM)
-                           └─ Phase 2: ragEngine (Vercel AI SDK + free LLM providers + RAG)
+                    └─ FastAPI backend (Railway)
+                           ├─ PostgreSQL structured eligibility query
+                           ├─ LiteLLM → OpenRouter (LLM response generation)
+                           └─ pgvector RAG (follow-up / nuanced queries only)
 ```
 
-The key architectural decision is the **`ChatEngine` interface** — all UI code only calls this interface, so the Phase 2 swap is purely an internal change. No UI rewrite needed.
+**Now (Phase 1 mock):** `/api/chat` calls `mockEngine` locally — no FastAPI, no DB, no LLM.
+**Phase 1 real:** `/api/chat` proxies to FastAPI on Railway.
+
+---
+
+## Target Audience
+
+**Primary:** Indian students.
+- Undergraduate (UG)
+- Postgraduate (PG)
+- PhD / Research scholars
+- Diploma students
+- Professional course students (engineering, medical, law, etc.)
+
+**Why students first?**
+Students frequently search for scholarships, fellowships, and grants scattered across multiple government portals. They are comfortable using AI chatbots, and a student-focused MVP is easier to validate before expanding to other beneficiary groups.
 
 ---
 
@@ -51,7 +70,7 @@ The key architectural decision is the **`ChatEngine` interface** — all UI code
 ```
 src/
 ├── app/
-│   ├── api/chat/route.ts          ← POST /api/chat endpoint
+│   ├── api/chat/route.ts          ← POST /api/chat (proxy to FastAPI in Phase 1)
 │   └── chat/page.tsx              ← /chat full-screen page
 │
 ├── components/chat/
@@ -61,303 +80,192 @@ src/
 │
 └── lib/chat/
     ├── engine.ts                  ← ChatEngine interface (the swap seam)
-    ├── mockEngine.ts              ← Phase 1 — keyword intent matching
+    ├── mockEngine.ts              ← current — keyword intent matching (student intents)
     ├── client.ts                  ← browser-side fetch wrapper
     ├── openChat.ts                ← chatHref() helper, ?q= deep-link
     ├── transcript.ts              ← localStorage persistence
-    ├── translations.ts            ← multilingual strings (LangCode ready)
-    ├── preferences.ts             ← user preferences (sound, etc.)
-    └── sound.ts                   ← message sound (optional)
+    └── translations.ts            ← multilingual strings (LangCode ready)
 ```
 
 ---
 
-## Phase 1 — Mock Engine (Current)
+## Current Mock Engine
 
-### How it works
+`src/lib/chat/mockEngine.ts` — deterministic, no network, no LLM. Covers student-focused intents:
 
-`src/lib/chat/mockEngine.ts` — deterministic, no network, no LLM.
-
-1. Input is lowercased and checked against 10 intent definitions (farmer, student, senior, business, women, housing, health, disability, skill, banking).
-2. Each intent has a list of keywords. First match wins.
-3. Matched intent → pulls real `Scheme` objects from `searchSchemes()` (keyword search over sample data) → returns a `BotTurn` with a text reply, up to 3 scheme cards, and quick-reply chips.
-4. If no intent matches: runs a loose `searchSchemes(text)` and returns whatever comes back.
-5. If nothing at all matches: friendly fallback asking the user to describe their situation.
-6. Certificate questions (`"income certificate"`, `"caste certificate"`, etc.) are routed to `/certificates` without scheme cards.
-
-### BotTurn type
-
-```ts
-interface BotTurn {
-  messages: { content: string }[];   // markdown text replies
-  schemeResults?: Scheme[];          // rendered as result cards
-  quickReplies?: QuickReply[];       // follow-up chips shown after reply
-}
-```
-
-### Current limitations
-
-- Only 18 sample schemes (clearly labelled "sample / preview") — not real data
-- No LLM — can only match pre-written keywords, no understanding of nuanced queries
-- No memory across turns (each `send()` is stateless)
-- Only English
+| Intent | Keywords |
+|--------|---------|
+| Scholarship seeker | scholarship, merit, financial aid, award |
+| SC/ST student | sc, st, dalit, tribal, scheduled caste/tribe |
+| Minority student | minority, muslim, christian, sikh, obc |
+| Girl / women in education | girl, women, female student |
+| Education loan | education loan, study loan, vidya lakshmi |
+| Fellowship / PhD | fellowship, phd, mphil, jrf, srf, research, ugc |
+| Differently-abled student | disability, disabled, divyang, saksham |
+| Technical education | engineering, medical, aicte, polytechnic, diploma |
+| NE / Hill region | northeast, assam, manipur, ishan, hill area |
+| Postgraduate | postgraduate, pg, masters, mtech, mba, msc |
 
 ---
 
-## API Route
+## Tech Stack
 
-**`POST /api/chat`** — `src/app/api/chat/route.ts`
+### Frontend (Vercel)
+- Next.js 14 + TypeScript
+- Tailwind CSS + shadcn/ui
+- `ChatEngine` interface as the abstraction seam
 
-Request body:
-```json
-{
-  "message": "I'm a farmer looking for crop insurance",
-  "history": [
-    { "role": "user", "content": "..." },
-    { "role": "assistant", "content": "..." }
-  ]
-}
+### Backend (Railway)
+- FastAPI (Python)
+- LiteLLM + OpenRouter (free model providers)
+
+### Database (Railway)
+- PostgreSQL (structured eligibility data)
+- pgvector (vector embeddings for RAG)
+
+### Eligibility Logic
+Eligibility checking uses **structured PostgreSQL queries first**, RAG only for nuanced follow-ups.
+
 ```
-
-Response:
-```json
-{
-  "messages": [{ "content": "Here are some schemes that may help..." }],
-  "schemeResults": [ /* Scheme[] */ ],
-  "quickReplies": [ /* { "label": "...", "send": "..." }[] */ ]
-}
+User describes situation → FastAPI extracts entities
+  (course_level, state, category, income, gender, disability)
+  │
+  ▼
+PostgreSQL: WHERE conditions match → returns eligible schemes
+  │
+  ▼
+LiteLLM → OpenRouter: formats plain-language response with citations
 ```
-
-Security guards already in place:
-- Body size capped at 64 KB
-- Message capped at 2,000 characters
-- History capped at 30 items (oldest trimmed)
-- Invalid JSON → 400
-- Oversized payload → 413
 
 ---
 
-## Phase 2 — Real LLM Engine (Planned)
+## Phase 1 — FastAPI Backend Plan
 
-### Design principle
-
-**$0 operating cost** — every piece of the Phase 2 stack must run entirely on free tiers. Speed is NOT a concern. Only zero operating cost matters.
-
-### Provider chain (Vercel AI SDK)
+### API endpoints (FastAPI)
 
 ```
-User message
-  │
-  ▼
-Vercel AI SDK  (`ai` npm package)
-  │
-  ├─ 1. Groq (free tier — Llama 3 / Mixtral)
-  ├─ 2. Cerebras (free tier)
-  ├─ 3. Google Gemini (free tier)
-  ├─ 4. OpenRouter :free models
-  └─ 5. Mistral / Cohere / HuggingFace (free tiers)
+POST /chat
+  body: { message: str, history: list[dict] }
+  returns: { messages, schemeResults, quickReplies }
+
+GET /schemes?category=&state=&income=&course_level=
+  returns: list of matching schemes
+
+GET /schemes/{id}
+  returns: full scheme detail
 ```
 
-Auto-fallback: if provider 1 is rate-limited, try 2, then 3, etc. If all fail → farmer-friendly "busy" message (no emoji, Lucide clock icon). The mock engine acts as the final never-fail fallback so the site always works.
+### Database schema (PostgreSQL)
 
-> **Note:** Vercel AI SDK (`ai`) is just a library — it calls the provider's API. It does NOT run any model itself. You need a **free provider API key**, not a Vercel key.
-
-### Answer caching
-
-Same scheme question → 1 model call for thousands of users. Cache key = normalized question hash. Drastically reduces free-tier consumption.
-
-### RAG (Retrieval Augmented Generation)
-
+```sql
+CREATE TABLE schemes (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  ministry      TEXT,
+  category      TEXT,            -- 'scholarship', 'fellowship', 'loan', 'grant'
+  course_level  TEXT[],          -- ['UG', 'PG', 'PhD', 'Diploma', 'any']
+  gender        TEXT,            -- 'female', 'male', 'any'
+  social_category TEXT[],        -- ['SC', 'ST', 'OBC', 'Minority', 'General']
+  max_income    INTEGER,         -- annual family income ceiling in ₹
+  state         TEXT[],          -- ['all-india', 'tamil-nadu', …]
+  benefits      TEXT,
+  documents     JSONB,
+  official_url  TEXT NOT NULL,
+  open_date     DATE,
+  close_date    DATE,
+  last_verified DATE NOT NULL,
+  embedding     vector(1536)     -- pgvector for RAG
+);
 ```
-User message
-  │
-  ▼
-Embed query → search vector store → retrieve top-k matching schemes
-  │
-  ▼
-Inject retrieved schemes into system prompt
-  │
-  ▼
-LLM generates a grounded, accurate answer (not hallucinated)
+
+### LiteLLM + OpenRouter
+
+```python
+from litellm import completion
+
+response = completion(
+    model="openrouter/meta-llama/llama-3-8b-instruct:free",
+    messages=[
+        {"role": "system", "content": SYSTEM_PROMPT},
+        *history,
+        {"role": "user", "content": user_message}
+    ]
+)
 ```
 
-RAG keeps prompts tiny, which saves tokens and fits free-tier limits.
+Free models via OpenRouter — auto-fallback if one is rate-limited.
 
-### BYOK ("Bring Your Own Key")
+### RAG (pgvector)
 
-When all free tiers are exhausted:
-- Show a simple "busy, try again in a few minutes" message (for ordinary citizens / farmers who cannot create API keys)
-- Offer `"Advanced: connect your own key"` as a quiet secondary option for technical users
-- **Security rule:** A BYOK key lives **only in the user's browser (`localStorage`) and is never sent to or stored on the server**
+Used only for follow-up questions and nuanced queries that go beyond structured filters:
 
-### Rate limiting
-
-Per-IP rate limiting to prevent abuse and protect free-tier quotas. Implementation: Upstash or Vercel WAF (to be added when LLM is live).
+```python
+embedding = embed(user_message)
+results = db.execute(
+    "SELECT * FROM schemes ORDER BY embedding <-> $1 LIMIT 5",
+    [embedding]
+)
+```
 
 ---
 
-## Phase 2 — Special Chat Features (Planned)
+## Data Sources
 
-### Feature A — Scheme Comparison
+Collect data only from official government websites:
 
-**Problem with existing tools (myScheme chatbot):** When asked "Compare Stand-Up India and MUDRA Loan, which is better for me?", the response lists facts for both schemes side-by-side but never asks who the user is, never filters by their eligibility, and ends with "consider factors like..." — leaving the decision entirely to the user.
-
-**How GovEligify will do it:**
-
-```
-User: "Compare Stand-Up India and MUDRA loan, which is better for me?"
-  │
-  Bot: "Are you SC/ST or a woman entrepreneur?"  →  [Yes] [No]
-  │
-  Bot: "How much loan do you need?"  →  [Under ₹10 lakh] [₹10 lakh–₹1 crore] [More]
-  │
-  Bot: "Is this a new business or existing?"  →  [New] [Existing]
-  │
-  ▼
-  Verdict: "MUDRA Loan (Kishore) is the right choice for you.
-           Stand-Up India requires SC/ST or woman status — you don't qualify.
-           For MUDRA, here's how to apply: [step-by-step]"
-```
-
-One clear answer with reasoning. Not a list that leaves the user to decide.
-
-**Intent triggers:** "compare X and Y", "which is better X or Y", "X vs Y"
-
-### Feature B — Rejection / Grievance Guidance
-
-**Problem with existing tools (myScheme chatbot):** When asked "My PMAY application was rejected — how do I appeal?", the response gives generic steps that don't account for state (appeal process differs by state), rejection reason (the fix is completely different depending on the reason), or timing (most schemes have 30–60 day appeal windows). It also links to CPGRAMS (a generic GOI complaints portal) instead of the scheme-specific grievance portal.
-
-**How GovEligify will do it:**
-
-```
-User: "My PMAY application was rejected, what do I do?"
-  │
-  Bot: "I'm sorry to hear that. Which state are you in?"  →  [state chips]
-  │
-  Bot: "What reason did they give?"
-       →  [Income too high] [Already owns a house] [Name not in list]
-          [Documents missing] [No reason given] [Other]
-  │
-  ▼
-  State-specific + reason-specific action plan:
-  - Exact office name and designation to contact
-  - Real grievance portal URL (pmayg.nic.in / pmaymis.gov.in, not CPGRAMS)
-  - Time limit for appeal (e.g. "within 30 days of rejection letter")
-  - Step-by-step next action
-```
-
-**Intent triggers:** "rejected", "application failed", "appeal", "complaint", "grievance"
-
-**Data needed:** A lookup JSON mapping scheme → state → grievance portal URL + district-level office designation + appeal deadline. This will be maintained alongside the Console validation work.
+| Source | URL | Type |
+|--------|-----|------|
+| National Scholarship Portal | scholarships.gov.in | Central scholarships |
+| University Grants Commission | ugc.gov.in | Higher education fellowships |
+| AICTE | aicte-india.org | Technical education scholarships |
+| Ministry of Education | education.gov.in | Education policy schemes |
+| State scholarship portals | (state-specific) | State-level scholarships |
+| MyScheme | myscheme.gov.in | Discovery only — verify on source |
 
 ---
 
-## Data Pipeline
+## MVP Scope
 
-The chatbot's knowledge comes from validated scheme data produced by the Console team.
-
-```
-Console (18 reviewers validate 3,237 schemes)
-  │
-  ▼
-Export: validated-schemes.v1.json
-  │
-  ▼
-SchemeProvider (src/lib/data.ts) ← the data swap seam
-  │
-  ├─ /explore and /explore/[slug] pages (auto-populate with all 3,237 schemes)
-  ├─ /chat chatbot (scheme search + RAG source)
-  └─ sitemap.ts (auto-generates URLs for all scheme pages)
-```
-
-**Step 0 (prerequisite for everything):** Export the Console's validated schemes → wire into `SchemeProvider` → all pages and the chatbot auto-populate. No page rewrites needed.
+Phase 1 release:
+- 100–300 validated student education schemes
+- Student eligibility chatbot (scholarship, fellowship, loan, grant)
+- Multilingual text (English + Tamil + Hindi)
+- Simplified explanations with official citations
+- Scheme comparison (interactive chips → eligibility-aware verdict)
+- Search and recommendations
 
 ---
 
-## Chat UI Features
-
-`src/components/chat/ChatScreen.tsx` is a `100dvh` client island that provides:
-
-- Welcome state with persona starters and example quick-reply chips
-- `role="log"` conversation with `aria-live="polite"` for accessibility
-- User + assistant message bubbles
-- `SchemeResultCard` — scheme name, ministry, category badge, summary, and "Apply on the official portal" link (`rel="nofollow noopener"`)
-- Fixed bottom composer (textarea, send button, stop button)
-- Quick-reply chips after each assistant turn
-- Typing indicator
-- Scroll-to-bottom pill
-- `?q=` deep-link — marketing pages pass a query via URL, the chat auto-sends it once on load
-- `localStorage` transcript persistence — conversation survives page refresh
-- `/` to focus composer, `Esc` to cancel a pending response
-
----
-
-## Multilingual Support
-
-The `Message` type already carries a `LangCode` field. Translations live in `src/lib/chat/translations.ts`. Phase 6 will add Hindi, Tamil, and regional language responses.
-
-myScheme's chatbot supports only English + Hindi for voice input. GovEligify plans support for 10 languages (en, ta, hi, ml, kn, te, mr, ur, sa, bn) — a real differentiator for South Indian and regional users.
-
----
-
-## Running Locally
+## Running Locally (Phase 1 Mock)
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Start dev server (port 3000, or 3100 if 3000 is busy)
 pnpm dev
-
-# Open the chatbot
 # http://localhost:3000/chat
 ```
 
-The mock engine runs entirely locally — no API keys needed for Phase 1.
+The mock engine runs entirely locally — no API keys or external services needed.
 
 ---
 
-## Phase 2 Implementation Checklist
+## Running FastAPI Backend (Phase 2)
 
-Before starting Phase 2 chat:
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+# http://localhost:8000
+```
 
-- [ ] Console validation sprint complete (3,237 schemes reviewed)
-- [ ] `validated-schemes.v1.json` exported from Console
-- [ ] SchemeProvider wired to real data (Step 0)
-
-Phase 2 chat build order:
-
-- [ ] Install `ai` (Vercel AI SDK) + provider packages (`@ai-sdk/groq`, etc.)
-- [ ] Build provider-fallback `ragEngine` replacing `mockEngine` in `route.ts`
-- [ ] Add system prompt + guardrails (scope to Indian government schemes)
-- [ ] Add answer caching
-- [ ] Add per-IP rate limiting
-- [ ] Add "busy" farmer-friendly message (Lucide clock icon, no emoji)
-- [ ] Add optional BYOK flow (localStorage only, never server-side)
-- [ ] Embed scheme data into vector store (RAG)
-- [ ] Wire RAG retrieval into `ragEngine`
-- [ ] Build scheme comparison flow (Feature A)
-- [ ] Build rejection/grievance guidance flow (Feature B)
-- [ ] Add Hindi + Tamil busy-message translations
-
----
-
-## Key Decisions
-
-| Decision | Choice | Reason |
-|----------|--------|--------|
-| LLM provider | Chain of free tiers (Groq → Cerebras → Gemini → OpenRouter) | $0 operating cost, auto-fallback |
-| SDK | Vercel AI SDK (`ai`) | Swap/chain providers in one line |
-| BYOK key storage | localStorage only, never server | Security — we never touch user's API key |
-| No application submission | Bot links to official portal only | Trust, consent, legal safety |
-| Caching | Answer cache before LLM call | Conserves free-tier quota under traffic |
-| Fallback | Mock engine as final fallback | Bot always responds, even if all LLMs fail |
-| Language | English first, regional in Phase 6 | Types already carry LangCode |
+Set environment variables:
+```
+DATABASE_URL=postgresql://...
+OPENROUTER_API_KEY=sk-...
+```
 
 ---
 
 ## Related Documentation
 
-- [Architecture overview](./ARCHITECTURE.md) — the two swap seams (data + chat)
-- [Roadmap](./ROADMAP.md) — full phased plan from Phase 1 to Phase 7
-- Console repo — internal validation tool where scheme data is produced
+- [Architecture](./ARCHITECTURE.md) — full stack diagram and swap seams
+- [Roadmap](./ROADMAP.md) — phased plan (Phase 1 → Phase 4)

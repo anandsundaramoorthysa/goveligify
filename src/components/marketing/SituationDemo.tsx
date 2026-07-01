@@ -7,17 +7,17 @@ import { buttonClasses } from "@/components/ui/Button";
 import { chatHref } from "@/lib/chat/openChat";
 
 const PLACEHOLDERS = [
-  "I'm a farmer in Bihar with two acres of land…",
-  "I'm a student looking for a scholarship after Class 10…",
-  "My mother is 65 and needs a pension…",
-  "I run a small tailoring business and need a loan…",
+  "I'm an SC student in Tamil Nadu looking for a scholarship…",
+  "I'm a girl student in engineering — are there scholarships for me?…",
+  "I need an education loan for my postgraduate studies…",
+  "I'm a PhD student looking for a UGC fellowship…",
 ];
 
 const CHIPS: { label: string; seed: string }[] = [
-  { label: "I'm a farmer", seed: "I'm a farmer and want to know which schemes I qualify for." },
-  { label: "I'm a student", seed: "I'm a student looking for scholarships and education support." },
-  { label: "Senior citizen", seed: "I'm a senior citizen — what pensions and benefits can I claim?" },
-  { label: "Small business", seed: "I run a small business and want loans or credit schemes." },
+  { label: "I need a scholarship", seed: "I'm a student looking for a scholarship to pay my college fees." },
+  { label: "SC / ST student", seed: "I'm an SC/ST student — what scholarships and fellowships am I eligible for?" },
+  { label: "Education loan", seed: "I need an education loan to pay my course fees." },
+  { label: "PhD fellowship", seed: "I'm a PhD student looking for a fellowship or research grant." },
 ];
 
 /** Preview input that rotates placeholders and routes to the /chat page. */

@@ -183,9 +183,9 @@ export default function HomePage() {
 
       {/* Citizens celebratory band */}
       <CitizensBand
-        eyebrow="For every Indian"
-        title="Benefits that belong to you"
-        lead="From farmers and students to seniors and entrepreneurs — government support is your right. We help you claim it."
+        eyebrow="For every student"
+        title="Scholarships that belong to you"
+        lead="From merit scholarships and SC/ST fellowships to education loans and research grants — government support for students is your right. We help you find it."
       />
 
       {/* Footer CTA band */}

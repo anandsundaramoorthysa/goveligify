@@ -1,157 +1,144 @@
-﻿import type { BotTurn, QuickReply, Scheme } from "@/lib/types";
+import type { BotTurn, QuickReply, Scheme } from "@/lib/types";
 import { searchSchemes } from "@/lib/data";
 import { SITE } from "@/lib/site";
 import type { ChatEngine } from "./engine";
 
 /**
- * Local, deterministic mock chat engine. No LLM, no network. It recognises a
- * handful of intents by keyword, pulls relevant sample schemes via
- * `searchSchemes`, and replies in plain language. Phase-2 replaces the internals
- * with a real RAG pipeline behind the same `ChatEngine` interface.
+ * Local, deterministic mock chat engine. No LLM, no network. Recognises
+ * student-focused intents by keyword, pulls relevant sample schemes via
+ * `searchSchemes`, and replies in plain language. Phase-2 replaces the
+ * internals with a real FastAPI + RAG backend behind the same `ChatEngine`
+ * interface.
  */
 
 const MAX_RESULTS = 3;
 
 const STARTER_REPLIES: QuickReply[] = [
-  { label: "I'm a farmer", send: "I'm a farmer looking for schemes" },
-  { label: "I'm a student", send: "I'm a student looking for a scholarship" },
-  { label: "I'm a senior citizen", send: "I'm a senior citizen looking for a pension" },
-  { label: "I run a small business", send: "I run a small business and need a loan" },
+  { label: "I need a scholarship", send: "I'm a student looking for a scholarship" },
+  { label: "I'm in SC/ST category", send: "I'm an SC/ST student looking for education support" },
+  { label: "I need an education loan", send: "I need an education loan for my studies" },
+  { label: "I'm doing a PhD", send: "I'm a PhD student looking for a fellowship or research grant" },
 ];
 
-const OFFER = "Would you like me to check anything else for you?";
+const OFFER = "Would you like me to help with anything else?";
 
 interface Intent {
-  /** Words/phrases that signal this intent. */
   keywords: string[];
-  /** Plain-language lead-in for the reply (before scheme cards). */
   reply: string;
-  /** Query handed to searchSchemes to fetch the relevant sample schemes. */
   query: string;
   quickReplies?: QuickReply[];
 }
 
 const INTENTS: Intent[] = [
   {
-    keywords: ["farmer", "farming", "agriculture", "crop", "kisan", "cultivat", "land", "harvest"],
+    keywords: ["scholarship", "merit", "financial aid", "financial support", "stipend", "award", "bursary"],
     reply:
-      "Thanks for telling me. Farmers can tap into income support and crop protection. Here are a couple of schemes that may fit your situation:",
-    query: "farmer agriculture crop income",
+      "There are several scholarships for students based on merit, income, and category. Here are some that may match your situation:",
+    query: "student scholarship merit income education",
     quickReplies: [
-      { label: "Crop insurance", send: "Tell me about crop insurance" },
-      { label: "Income support", send: "I want income support for my farm" },
-      { label: "I'm also a senior citizen", send: "I'm a senior citizen looking for a pension" },
+      { label: "I'm SC/ST category", send: "I'm an SC/ST student looking for a scholarship" },
+      { label: "I'm a girl student", send: "I'm a girl student — are there scholarships for me?" },
+      { label: "I need an education loan", send: "I need an education loan to pay my fees" },
     ],
   },
   {
-    keywords: ["student", "scholarship", "study", "studies", "college", "school", "education", "tuition"],
+    keywords: ["sc", "st", "scheduled caste", "scheduled tribe", "dalit", "tribal", "obc", "backward class"],
     reply:
-      "Got it. There are scholarships and savings schemes that help students with the cost of education. These look relevant:",
-    query: "student scholarship education",
+      "There are dedicated scholarships and fellowships for SC, ST, and OBC students at every level. These may be relevant:",
+    query: "SC ST OBC scholarship post matric fellowship reserved",
     quickReplies: [
-      { label: "Girl-child savings", send: "Savings scheme for a girl child" },
-      { label: "Documents I'll need", send: "What documents do I need for a scholarship?" },
-      { label: "I'm a farmer", send: "I'm a farmer looking for schemes" },
+      { label: "Post-matric scholarship", send: "Tell me about post matric scholarship for SC students" },
+      { label: "PhD fellowship", send: "I'm an SC student doing a PhD — what fellowship can I get?" },
+      { label: "Other scholarships", send: "What other scholarships exist for SC ST students?" },
     ],
   },
   {
-    keywords: ["senior", "old age", "pension", "elderly", "retire", "retirement", "aged"],
+    keywords: ["minority", "muslim", "christian", "sikh", "buddhist", "parsi", "jain", "maulana azad"],
     reply:
-      "Understood. Senior citizens and people planning for retirement have pension options. Here is what may help:",
-    query: "pension senior citizen old age retirement",
+      "Minority community students have access to dedicated scholarships from the Ministry of Minority Affairs. Here are the relevant ones:",
+    query: "minority scholarship pre matric post matric merit",
     quickReplies: [
-      { label: "Pension after 60", send: "Pension scheme after the age of 60" },
-      { label: "Documents I'll need", send: "What documents do I need for a pension?" },
-      { label: "I run a small business", send: "I run a small business and need a loan" },
+      { label: "Pre-matric", send: "Minority scholarship for class 9 and 10" },
+      { label: "Post-matric", send: "Minority scholarship for college students" },
     ],
   },
   {
-    keywords: [
-      "business",
-      "loan",
-      "entrepreneur",
-      "shop",
-      "enterprise",
-      "startup",
-      "self-employ",
-      "self employ",
-      "credit",
-      "mudra",
-      "artisan",
-    ],
+    keywords: ["girl", "women", "female", "woman student", "girls education", "beti"],
     reply:
-      "Great. There are credit and loan schemes for small businesses, women entrepreneurs, and artisans. A few that may suit you:",
-    query: "business loan entrepreneur credit women",
+      "There are scholarships specifically for girl students and women in higher and technical education. These look relevant:",
+    query: "girl women scholarship technical education female student",
     quickReplies: [
-      { label: "Loan for women", send: "Business loan for women entrepreneurs" },
-      { label: "Micro-loan", send: "Small micro-loan for my shop" },
-      { label: "I'm a student", send: "I'm a student looking for a scholarship" },
+      { label: "Engineering / AICTE", send: "Scholarship for girl students in engineering" },
+      { label: "General scholarship", send: "General scholarship for girl students" },
     ],
   },
   {
-    keywords: ["woman", "women", "girl", "mother", "maternity", "pregnan", "widow", "female"],
+    keywords: ["education loan", "study loan", "loan for studies", "vidya lakshmi", "fee loan", "pay fees"],
     reply:
-      "Thanks. There are schemes supporting women — maternity benefit, business credit, and the girl child. These may be relevant:",
-    query: "women girl maternity entrepreneur",
+      "The government offers education loan guarantee schemes that make bank loans accessible for higher education. Here is what may help:",
+    query: "education loan student vidya lakshmi bank guarantee",
     quickReplies: [
-      { label: "Maternity benefit", send: "Maternity benefit for pregnant women" },
-      { label: "Loan for women", send: "Business loan for women entrepreneurs" },
+      { label: "Documents needed", send: "What documents do I need for an education loan?" },
+      { label: "Loan limit", send: "How much education loan can I get?" },
     ],
   },
   {
-    keywords: ["house", "housing", "home", "awas", "shelter", "pucca", "rent"],
+    keywords: ["phd", "mphil", "research", "fellowship", "jrf", "srf", "junior research", "senior research", "ugc fellowship", "csir", "dst"],
     reply:
-      "Got it. There is housing support to help build or buy a home. Here is what may apply:",
-    query: "housing home awas subsidy",
+      "Research scholars and PhD students can access national fellowships from UGC, CSIR, and DST. These are the main options:",
+    query: "PhD research fellowship JRF SRF UGC national",
     quickReplies: [
-      { label: "Documents I'll need", send: "What documents do I need for housing?" },
-      { label: "I'm a farmer", send: "I'm a farmer looking for schemes" },
+      { label: "UGC fellowship", send: "UGC fellowship for PhD students" },
+      { label: "CSIR JRF", send: "CSIR junior research fellowship for science students" },
+      { label: "SC PhD fellowship", send: "National fellowship for SC PhD students" },
     ],
   },
   {
-    keywords: ["health", "hospital", "medical", "insurance", "treatment", "illness", "ayushman", "lpg", "gas"],
+    keywords: ["disability", "disabled", "differently abled", "divyang", "saksham", "handicap", "wheelchair", "visually impaired"],
     reply:
-      "Understood. There are health insurance and welfare schemes that lower medical and household costs. These may help:",
-    query: "health insurance hospital ayushman",
+      "There are dedicated scholarships and schemes for students with disabilities. Here is what may apply:",
+    query: "disability scholarship differently abled student saksham",
     quickReplies: [
-      { label: "Hospital cover", send: "Cashless hospital treatment cover" },
-      { label: "Clean cooking gas", send: "LPG gas connection scheme" },
+      { label: "AICTE Saksham", send: "AICTE Saksham scholarship for disabled students in technical courses" },
+      { label: "Other schemes", send: "Other disability scholarships for students" },
     ],
   },
   {
-    keywords: ["disab", "divyang", "handicap", "assistive", "wheelchair"],
+    keywords: ["engineering", "medical", "aicte", "polytechnic", "technical", "diploma", "b.tech", "mbbs", "btech"],
     reply:
-      "Thanks. There is support for persons with disabilities, including assistive devices. Here is what may apply:",
-    query: "disability assistive divyangjan",
+      "AICTE has dedicated scholarships for students in technical and professional courses. These look relevant:",
+    query: "AICTE technical engineering scholarship merit student",
     quickReplies: [
-      { label: "Assistive devices", send: "Assistive devices for disability" },
-      { label: "Documents I'll need", send: "What documents do I need?" },
+      { label: "Girl student", send: "Scholarship for girl students in engineering (Pragati)" },
+      { label: "Disabled student", send: "Scholarship for disabled students in technical courses (Saksham)" },
     ],
   },
   {
-    keywords: ["skill", "training", "job", "employment", "unemployed", "course", "youth"],
+    keywords: ["northeast", "north east", "assam", "manipur", "meghalaya", "tripura", "mizoram", "nagaland", "ishan uday", "hill area", "tribal area"],
     reply:
-      "Got it. There are skilling and employment schemes that train you and improve job prospects. These look relevant:",
-    query: "skill training employment youth",
+      "Students from North-East states and hill areas have access to the Ishan Uday scholarship for higher education. Here is more:",
+    query: "Ishan Uday northeast scholarship hill area higher education",
     quickReplies: [
-      { label: "Skill training", send: "Free skill training programme" },
-      { label: "I run a small business", send: "I run a small business and need a loan" },
+      { label: "Ishan Uday details", send: "Tell me more about Ishan Uday scholarship" },
+      { label: "Other scholarships", send: "What other scholarships are available for NE students?" },
     ],
   },
   {
-    keywords: ["bank account", "jan dhan", "financial inclusion", "savings account", "rupay"],
+    keywords: ["postgraduate", "pg", "masters", "mtech", "mba", "msc", "ma ", "post graduation"],
     reply:
-      "There are financial-inclusion schemes that open a zero-balance bank account with basic benefits. Here is what may help:",
-    query: "bank account financial inclusion jan dhan savings",
+      "Postgraduate students can access merit-based scholarships and fellowships for continued education. Here are some options:",
+    query: "postgraduate scholarship PG masters fellowship merit",
+    quickReplies: [
+      { label: "Fellowship options", send: "Fellowship for postgraduate students" },
+      { label: "SC/ST PG support", send: "Scholarship for SC ST postgraduate students" },
+    ],
   },
 ];
 
-/** Map raw user text to a Scheme[] for an intent, capped and de-duplicated. */
 function lookup(query: string): Scheme[] {
   return searchSchemes(query).slice(0, MAX_RESULTS);
 }
 
-/** Build a turn from a single intent match, attaching real scheme results. */
 function intentTurn(intent: Intent): BotTurn {
   const schemes = lookup(intent.query);
   const lead = schemes.length
@@ -164,27 +151,12 @@ function intentTurn(intent: Intent): BotTurn {
   };
 }
 
-/** Certificate questions route to the dedicated /certificates section. */
-function certificateTurn(): BotTurn {
-  return {
-    messages: [
-      {
-        content:
-          "For documents like an **income certificate**, **community certificate**, or **residence certificate**, head to our [Certificates section](/certificates). It explains who can apply, the documents you'll need, the steps, and links to the official portal.\n\n" +
-          OFFER,
-      },
-    ],
-    quickReplies: STARTER_REPLIES,
-  };
-}
-
-/** Nothing matched — keep it friendly and offer the starters. */
 function fallbackTurn(): BotTurn {
   return {
     messages: [
       {
         content:
-          "I want to point you to the right scheme. Tell me a little about your situation in plain words — for example, your work, age, or what you need help with — and I'll find what you may be entitled to.\n\n" +
+          "I'm here to help you find scholarships, fellowships, education loans, and grants. Tell me a bit about yourself — your course level, state, social category, or what kind of support you're looking for — and I'll find what you may be eligible for.\n\n" +
           "You can also tap one of the options below to get started. " +
           OFFER,
       },
@@ -193,25 +165,16 @@ function fallbackTurn(): BotTurn {
   };
 }
 
-const CERTIFICATE_HINTS = [
-  "certificate",
-  "income certificate",
-  "community certificate",
-  "caste certificate",
-  "residence certificate",
-  "domicile",
-  "nativity",
-];
-
 export const mockEngine: ChatEngine = {
   greeting(): BotTurn {
     return {
       messages: [
         {
           content:
-            `Hello, I'm the **${SITE.name} Assistant**. Tell me about yourself — your work, age, or what you need — and I'll help you discover government schemes you may be entitled to, the documents you'll need, and where to apply.\n\n` +
+            `Hello, I'm the **${SITE.name} Assistant**. I help Indian students discover government scholarships, fellowships, education loans, and grants they are eligible for.\n\n` +
+            "Tell me about yourself — your course, year, state, social category, or what kind of support you need — and I'll help you find what you may be entitled to, the documents required, and where to apply.\n\n" +
             "A quick note: CheckMyEligibility is an independent guide, **not affiliated with any government**, and **we never submit applications for you** — we point you to the official portal.\n\n" +
-            "Who are you, or what do you need help with today?",
+            "Who are you, or what support are you looking for today?",
         },
       ],
       quickReplies: STARTER_REPLIES,
@@ -222,26 +185,15 @@ export const mockEngine: ChatEngine = {
     const text = input.toLowerCase().trim();
     if (!text) return fallbackTurn();
 
-    // Certificate questions go to the dedicated section, not scheme cards.
-    if (CERTIFICATE_HINTS.some((hint) => text.includes(hint))) {
-      return certificateTurn();
-    }
-
-    // First intent whose keywords appear in the message wins.
     const matched = INTENTS.find((intent) =>
       intent.keywords.some((kw) => text.includes(kw)),
     );
     if (matched) return intentTurn(matched);
 
-    // Last resort: a free-text search over the catalogue before giving up.
     const loose = lookup(text);
     if (loose.length) {
       return {
-        messages: [
-          {
-            content: `Here's what I found based on what you said.\n\n${OFFER}`,
-          },
-        ],
+        messages: [{ content: `Here's what I found based on what you said.\n\n${OFFER}` }],
         schemeResults: loose,
         quickReplies: STARTER_REPLIES,
       };
