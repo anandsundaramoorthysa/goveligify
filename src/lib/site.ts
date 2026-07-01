@@ -10,7 +10,7 @@ export const SITE = {
   locale: "en-IN",
   email: "hello@checkmyeligibility.in",
   github: "https://github.com/anandsundaramoorthysa/checkmyeligibility",
-  license: "MIT",
+  license: "PolyForm Noncommercial 1.0",
   institution: "Dept. of Data Science, Loyola College, Chennai",
   // Independence disclaimer shown in footer + chat (legal/trust safety).
   disclaimer:

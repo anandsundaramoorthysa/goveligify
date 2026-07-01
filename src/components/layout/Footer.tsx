@@ -25,7 +25,7 @@ export function Footer() {
               className="inline-flex items-center gap-1.5 transition-colors hover:text-navy"
             >
               <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Open source · MIT License
+              Open source · PolyForm Noncommercial
             </a>
           </div>
         </div>

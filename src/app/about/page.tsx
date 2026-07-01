@@ -181,18 +181,21 @@ export default function AboutPage() {
             ensure accuracy.
           </p>
           <p className="mt-4 text-pretty leading-relaxed text-ink-muted">
-            The source code is open to the public under the MIT License. Anyone can
-            read it, audit it, or contribute.
+            The source code is open to the public under the PolyForm Noncommercial
+            License 1.0 — free for personal, educational, and research use. Anyone
+            can read it, audit it, or contribute.
           </p>
-          <a
-            href={SITE.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center gap-2 rounded-full border border-navy/20 bg-surface-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-navy/40 hover:text-navy"
-          >
-            <Code2 className="h-4 w-4" aria-hidden="true" />
-            View source on GitHub · MIT License
-          </a>
+          <div className="mt-6 flex justify-center">
+            <a
+              href={SITE.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-surface-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-navy/40 hover:text-navy"
+            >
+              <Code2 className="h-4 w-4" aria-hidden="true" />
+              View source on GitHub
+            </a>
+          </div>
         </Container>
       </section>
 

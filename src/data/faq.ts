@@ -49,7 +49,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Is CheckMyEligibility open source?",
-    a: "Yes. CheckMyEligibility is open source under the MIT License. The source code is publicly available on GitHub.",
+    a: "Yes. CheckMyEligibility is open source under the PolyForm Noncommercial License 1.0 — free for personal, educational, and research use. The source code is publicly available on GitHub.",
   },
   {
     q: "How is the scheme data validated?",
